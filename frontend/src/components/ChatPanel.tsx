@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import type { ChatMessage, Citation } from "../types";
 import { BotIcon, InfoIcon, LinkIcon, NoteIcon, SendIcon } from "./icons";
+import { Markdown } from "./Markdown";
 import { Badge, Dot } from "./ui";
 
 interface Props {
@@ -140,7 +141,11 @@ function AssistantBubble({ message }: { message: ChatMessage }) {
               : "border-white/10 bg-white/5 text-slate-200"
           }`}
         >
-          <p className="whitespace-pre-wrap break-words leading-relaxed">{message.text}</p>
+          {message.error ? (
+            <p className="whitespace-pre-wrap break-words leading-relaxed">{message.text}</p>
+          ) : (
+            <Markdown>{message.text}</Markdown>
+          )}
         </div>
         {hasCitations && <CitationList citations={message.citations!} />}
       </div>

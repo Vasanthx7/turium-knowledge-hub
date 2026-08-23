@@ -28,8 +28,8 @@ export default function App() {
         </div>
       </header>
 
-      <main className="grid flex-1 grid-cols-1 overflow-hidden md:grid-cols-[1.05fr_1fr]">
-        <section className="flex flex-col gap-4 overflow-y-auto border-white/10 p-5 md:border-r">
+      <main className="grid flex-1 grid-cols-1 overflow-hidden md:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] md:grid-rows-1">
+        <section className="flex min-h-0 flex-col gap-4 overflow-y-auto border-white/10 p-5 md:border-r">
           <AddItemForm
             submitting={submitting}
             error={error}
@@ -54,7 +54,7 @@ export default function App() {
           </div>
         </section>
 
-        <section className="min-h-0 border-white/10">
+        <section className="min-h-0 min-w-0 border-white/10">
           <ChatPanel
             messages={messages}
             asking={asking}

@@ -47,7 +47,7 @@ export function ChatPanel({ messages, asking, itemCount, onAsk }: Props) {
       </div>
 
       {/* Thread */}
-      <div className="flex-1 space-y-4 overflow-y-auto px-5 py-5">
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5">
         <GreetingBubble />
         {messages.map((m) =>
           m.role === "user" ? (
@@ -118,12 +118,12 @@ function AssistantBubble({ message }: { message: ChatMessage }) {
     return (
       <div className="flex gap-3">
         <Avatar />
-        <div className="max-w-[85%] rounded-2xl rounded-tl-sm border border-amber-400/25 bg-amber-400/[0.07] px-4 py-3 text-sm text-amber-100/90">
+        <div className="min-w-0 max-w-[85%] rounded-2xl rounded-tl-sm border border-amber-400/25 bg-amber-400/[0.07] px-4 py-3 text-sm text-amber-100/90">
           <div className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-amber-300/80">
             <InfoIcon className="h-3.5 w-3.5" />
             No grounded answer
           </div>
-          <p className="whitespace-pre-wrap leading-relaxed">{message.text}</p>
+          <p className="whitespace-pre-wrap break-words leading-relaxed">{message.text}</p>
         </div>
       </div>
     );
@@ -132,7 +132,7 @@ function AssistantBubble({ message }: { message: ChatMessage }) {
   return (
     <div className="flex gap-3">
       <Avatar />
-      <div className="max-w-[85%] space-y-3">
+      <div className="min-w-0 max-w-[85%] space-y-3">
         <div
           className={`rounded-2xl rounded-tl-sm border px-4 py-3 text-sm ${
             message.error
@@ -140,7 +140,7 @@ function AssistantBubble({ message }: { message: ChatMessage }) {
               : "border-white/10 bg-white/5 text-slate-200"
           }`}
         >
-          <p className="whitespace-pre-wrap leading-relaxed">{message.text}</p>
+          <p className="whitespace-pre-wrap break-words leading-relaxed">{message.text}</p>
         </div>
         {hasCitations && <CitationList citations={message.citations!} />}
       </div>
@@ -184,7 +184,7 @@ function CitationList({ citations }: { citations: Citation[] }) {
               href={c.source_url}
               target="_blank"
               rel="noreferrer"
-              className="mt-1 inline-block truncate text-violet-400 hover:underline"
+              className="mt-1 block truncate text-violet-400 hover:underline"
             >
               {c.source_url}
             </a>

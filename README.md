@@ -95,10 +95,10 @@ backend/app/
 ### Design decisions and tradeoffs
 
 **Storage and search.** SQLite is the durable store. Retrieval runs in memory: embeddings sit in a normalised NumPy matrix, and each query is scored with one matrix-vector product. This is fast and needs no extra services.
-*Tradeoff:* the index must fit in RAM and is rebuilt on startup, and search cost grows with the number of chunks. Past a few hundred thousand chunks, swap the `VectorIndex` class for an approximate index such as FAISS or pgvector.
+*Tradeoff:* the whole index lives in memory, so it must fit in RAM and is rebuilt from SQLite on startup, and because every query scores against all chunks, search cost grows linearly with the corpus.
 
 **Chunking.** Documents are split into fixed-size character windows with overlap, and each boundary is moved to the nearest paragraph or sentence break. This keeps context across boundaries and avoids cutting mid-sentence.
-*Tradeoff:* token-based or semantic splitting is more precise but adds a tokenizer or extra model calls. It drops in behind the `ChunkingStrategy` interface without touching ingestion.
+*Tradeoff:* fixed-size windows are not semantically aware, so a chunk can still split a coherent section, and the overlap stores some text more than once.
 
 **AI provider.** The default is a local model via Ollama: no API key, and data stays on the machine. Ollama speaks the OpenAI API, so one adapter covers both backends and the provider is a config switch.
 *Note:* OpenAI works through the same interface but was not tested for this submission.
@@ -110,7 +110,7 @@ backend/app/
 
 **Write ordering.** On ingest, SQLite is written before the in-memory index, so a failed write cannot leave the index holding chunks that were never saved.
 
-**Known limits.** Ingestion is synchronous: the request blocks while a URL is fetched and embedded. That is fine for single-user use but would move to a background worker otherwise. SQLite also serialises writes, which is enough here and would become Postgres for real write concurrency.
+**Known limits.** Ingestion is synchronous: the request blocks while the URL is fetched and embedded. SQLite also serialises writes to a single writer at a time. Both are acceptable for a single-user tool.
 
 ---
 
@@ -138,7 +138,7 @@ uv run python -m evaluation.evaluate golden_set_hard.json    # hard set
 **What this shows**
 
 - **Retrieval is robust to distractors and multi-hop.** Every required source was retrieved (recall & all-sources = 100% @k=6) even for 2–3-source synthesis questions; answers stayed grounded (faithfulness 4.33/5).
-- **Out-of-scope rejection is opt-in.** A cosine floor alone can't reject out-of-scope questions (unrelated scores overlap valid weak ones), so with the default `RELEVANCE_GATE=false` they slip through (**0/3** rejected). Enabling the **LLM relevance gate** (`RELEVANCE_GATE=true`, the run shown above) takes this to **3/3**, at the cost of one extra LLM call per query and one oblique paraphrase ("image vs container") also being declined. It ships off by default; turn it on when rejecting out-of-scope questions matters more than latency. A cross-encoder reranker would reduce the false-decline.
+- **Out-of-scope rejection is opt-in.** A cosine floor alone can't reject out-of-scope questions (unrelated scores overlap valid weak ones), so with the default `RELEVANCE_GATE=false` they slip through (**0/3** rejected). Enabling the **LLM relevance gate** (`RELEVANCE_GATE=true`, the run shown above) takes this to **3/3**, at the cost of one extra LLM call per query and one oblique paraphrase ("image vs container") also being declined. It ships off by default; turn it on when rejecting out-of-scope questions matters more than latency.
 - **Cites-all (78%) is `answer_k`-bounded**, not a retrieval miss: with 4 chunks sent, a 3-source question can't cite 3 distinct docs. Raising `EVAL_ANSWER_K` lifts it. Emitting the `[Source N]` ids the model actually used is the open citation-precision item.
 
 ---

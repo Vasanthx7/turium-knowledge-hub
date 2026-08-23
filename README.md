@@ -94,19 +94,23 @@ backend/app/
 
 ### Design decisions and tradeoffs
 
-**Storage and search.** SQLite is the durable record for items, chunks, and embeddings. Similarity search runs in memory: embeddings are held in a normalised NumPy matrix and a query is scored with a single matrix-vector product. For a single-user knowledge base this is fast and avoids any native dependency or external service. The tradeoff is that the index must fit in memory and is rebuilt from SQLite at startup, and search cost grows linearly with the number of chunks. Beyond roughly a few hundred thousand chunks an approximate index such as FAISS or pgvector would be warranted; it would replace the `VectorIndex` class and nothing else.
+**Storage and search.** SQLite is the durable store. Retrieval runs in memory: embeddings sit in a normalised NumPy matrix, and each query is scored with one matrix-vector product. This is fast and needs no extra services.
+*Tradeoff:* the index must fit in RAM and is rebuilt on startup, and search cost grows with the number of chunks. Past a few hundred thousand chunks, swap the `VectorIndex` class for an approximate index such as FAISS or pgvector.
 
-**Chunking.** Documents are split into fixed-size character windows with a fixed overlap, and each boundary is moved to the nearest paragraph or sentence break. Fixed windows are predictable, the overlap keeps context intact when an answer spans a boundary, and snapping avoids cutting mid-sentence. Token-based or semantic splitting would be more precise at the cost of a tokenizer or extra model calls; because chunking sits behind the `ChunkingStrategy` interface, swapping it would not touch the ingestion code.
+**Chunking.** Documents are split into fixed-size character windows with overlap, and each boundary is moved to the nearest paragraph or sentence break. This keeps context across boundaries and avoids cutting mid-sentence.
+*Tradeoff:* token-based or semantic splitting is more precise but adds a tokenizer or extra model calls. It drops in behind the `ChunkingStrategy` interface without touching ingestion.
 
-**AI provider.** The default is a local model served by Ollama, which needs no API key and keeps data on the machine. Ollama exposes an OpenAI-compatible API, so a single adapter serves either backend and the provider is chosen from configuration. OpenAI is supported through the same interface but was not exercised for this submission.
+**AI provider.** The default is a local model via Ollama: no API key, and data stays on the machine. Ollama speaks the OpenAI API, so one adapter covers both backends and the provider is a config switch.
+*Note:* OpenAI works through the same interface but was not tested for this submission.
 
-**Out-of-scope questions.** A cosine threshold alone does not reliably separate unrelated questions from weakly-worded valid ones, since their score ranges overlap. An optional relevance gate asks the model whether the retrieved context actually answers the question before generating. It is off by default because it adds one model call per query; enabling it trades a little latency, and the occasional false decline, for correct rejection of out-of-scope questions (see Evaluation). The gate fails open, so an unparseable verdict never suppresses a valid answer.
+**Out-of-scope questions.** A cosine threshold cannot reliably separate unrelated questions from weakly-worded valid ones, because their scores overlap. An optional relevance gate asks the model whether the context actually answers the question before generating.
+*Tradeoff:* it adds one model call per query, so it ships off by default. Enabled, it rejects out-of-scope questions at the cost of the occasional false decline (see Evaluation). It fails open, so a bad verdict never drops a valid answer.
 
-**URL ingestion.** Fetching a user-supplied URL server-side is an SSRF risk, so redirects are followed manually and every hop is resolved and rejected if it points at a private, loopback, or link-local address. Non-HTTP schemes are refused and the response body is capped while streaming.
+**URL ingestion.** Fetching user-supplied URLs server-side is an SSRF risk. Redirects are followed manually, and every hop is rejected if it resolves to a private, loopback, or link-local address. Non-HTTP schemes are refused and the body is capped while streaming.
 
-**Write ordering.** On ingest the item is written to SQLite before the in-memory index is updated, so a failed write cannot leave the index holding chunks that were never persisted.
+**Write ordering.** On ingest, SQLite is written before the in-memory index, so a failed write cannot leave the index holding chunks that were never saved.
 
-**Known limits.** Ingestion is synchronous (the request blocks while a URL is fetched and embedded), which suits interactive single-user use but would move to a background worker otherwise. SQLite serialises writes, which is adequate here and would become Postgres if real write concurrency were needed.
+**Known limits.** Ingestion is synchronous: the request blocks while a URL is fetched and embedded. That is fine for single-user use but would move to a background worker otherwise. SQLite also serialises writes, which is enough here and would become Postgres for real write concurrency.
 
 ---
 

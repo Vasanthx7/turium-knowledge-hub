@@ -1,0 +1,32 @@
+[project]
+name = "turium-knowledge-hub"
+version = "1.0.0"
+description = "AI Knowledge Inbox — a minimal RAG app (FastAPI backend)."
+requires-python = ">=3.11"
+dependencies = [
+    # Web framework
+    "fastapi==0.141.1",
+    "uvicorn[standard]==0.52.4",
+    # Config & validation
+    "pydantic==2.13.4",
+    "pydantic-settings==2.15.0",
+    # HTTP client + HTML extraction for URL ingestion
+    "httpx==0.28.1",
+    "beautifulsoup4==4.15.0",
+    "lxml==6.1.2",
+    # AI provider (OpenAI-compatible; drives both Ollama and OpenAI)
+    "openai==3.3.1",
+    # Vectorised in-memory nearest-neighbour search (see VectorIndex)
+    "numpy==2.2.6",
+]
+
+[dependency-groups]
+dev = [
+    "pytest==9.1.1",
+    "pytest-asyncio==1.4.0",
+]
+
+[tool.uv]
+# This is an application run via `uvicorn app.main:app`, not an installable
+# library, so uv manages the environment without building/installing the project.
+package = false

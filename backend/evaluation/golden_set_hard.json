@@ -1,0 +1,78 @@
+{
+  "description": "Hard evaluation set: long multi-chunk documents with deliberately overlapping vocabulary (cross-content distractors), and complex queries — comparative, multi-hop synthesis spanning 2-3 sources, negation, and paraphrases with little keyword overlap. Multi-source queries list several expected_doc_ids; the evaluator measures context recall (did it find all needed sources), not just a single hit.",
+  "documents": [
+    {
+      "id": "sqlite",
+      "title": "SQLite",
+      "text": "SQLite is a lightweight relational database that is serverless and embedded: rather than running as a separate process that clients connect to over a socket, the entire engine is compiled into the application and the whole database lives in a single file on disk. This makes setup trivial and deployment portable, which is why it is popular for mobile apps, desktop software, and single-user services.\n\nIts concurrency model is its defining limitation. SQLite uses database-level locking, and even in Write-Ahead Logging (WAL) mode it allows only one writer at a time, though many readers can proceed concurrently with that writer. For a workload with a handful of users this is a non-issue and reads are extremely fast, but for many clients writing simultaneously the single-writer bottleneck serializes writes and throughput collapses. SQLite is therefore an excellent fit for embedded and low-write-concurrency scenarios and a poor fit when many processes must write at once. When an application outgrows it, teams typically migrate to a client-server database such as PostgreSQL."
+    },
+    {
+      "id": "postgres",
+      "title": "PostgreSQL",
+      "text": "PostgreSQL is a client-server relational database: a dedicated server process manages the data and clients connect to it over the network. This architecture is built for concurrency. PostgreSQL uses Multi-Version Concurrency Control (MVCC), which lets many transactions read and write at the same time without blocking each other, because readers see a consistent snapshot while writers create new row versions. As a result it handles high write concurrency far better than a single-file embedded engine.\n\nFor scale and reliability PostgreSQL offers streaming replication, connection pooling, partitioning, and rich indexing. It is also extensible: the pgvector extension adds a native vector column type and approximate-nearest-neighbour indexes, so embeddings can be stored and searched directly in the database. This makes PostgreSQL a common destination both when an embedded database can no longer handle write concurrency and when an in-memory vector search needs to become durable and scalable."
+    },
+    {
+      "id": "vector_index",
+      "title": "Vector indexes and scaling search",
+      "text": "A vector search finds the items whose embeddings are most similar to a query embedding. The simplest implementation is a brute-force scan: compute the cosine similarity between the query and every stored vector and keep the top-k. This is exact and trivial to implement, and for a few thousand vectors it runs in well under a millisecond, but its cost grows linearly with the number of vectors times the dimension, so it degrades once the corpus reaches hundreds of thousands or millions of chunks.\n\nAt that scale you replace the scan with an Approximate Nearest Neighbour (ANN) index. HNSW builds a navigable small-world graph that finds close neighbours in roughly logarithmic time; IVF partitions the space into clusters and only searches the nearest ones. Libraries such as FAISS provide these indexes in-process, while pgvector and dedicated vector databases persist them. The trade-off is that ANN is approximate — it trades a small amount of recall for a large speed-up — and the index must be built and kept in memory."
+    },
+    {
+      "id": "embeddings",
+      "title": "Embeddings and similarity",
+      "text": "An embedding model maps a piece of text to a fixed-length vector of numbers so that texts with similar meaning land near each other in the vector space. This is why two differently-worded sentences about the same topic end up numerically close: the model has learned to place meaning, not surface words, into geometry. Similarity is measured with cosine similarity, the cosine of the angle between two vectors, where a higher value means more semantically similar.\n\nThe length of the vector is the embedding dimension — 768 for nomic-embed-text, 1536 for OpenAI's text-embedding-3-small. More dimensions can encode finer distinctions but cost more storage and compute. Embedding models are bi-encoders: the document and the query are encoded independently into vectors that are then compared, which is fast because document vectors can be precomputed. Each model also has a maximum input length; text longer than that is truncated, so inputs must be split to fit."
+    },
+    {
+      "id": "chunking",
+      "title": "Chunking strategy",
+      "text": "Chunking splits a long document into smaller passages that become the unit of retrieval. Chunks that are too large dilute relevance and may exceed the embedding model's maximum input length, causing truncation; chunks that are too small lose the surrounding context needed to make sense of a passage. A common approach is a fixed window measured in characters or tokens, with the boundary snapped to a sentence or paragraph break so passages stay coherent.\n\nOverlap is the practice of repeating a portion of the previous chunk at the start of the next one. It matters because an answer often straddles a boundary; without overlap the sentence that actually contains the answer could be cut in half and lost from both chunks. The cost is some duplicated text and slightly more vectors to store. Choosing chunk size and overlap is therefore a trade-off tied to the embedding model's context length and the shape of the source documents."
+    },
+    {
+      "id": "rag",
+      "title": "Retrieval Augmented Generation",
+      "text": "Retrieval Augmented Generation (RAG) answers a question by first retrieving relevant passages from a knowledge base and then having a language model generate an answer using only those passages as context. The pipeline is: split documents into chunks, embed each chunk, store the vectors, embed the incoming question, retrieve the most similar chunks, optionally rerank them, and finally pass the question plus the retrieved context to the model.\n\nGrounding the answer in retrieved text is what reduces hallucination: instead of relying on whatever the model memorised, it must draw from real sources, and those sources can be cited so a user can verify each claim. The quality of a RAG system is therefore bounded by its retrieval — if the right passage is not retrieved, no amount of generation skill can produce a correct, grounded answer. This is why retrieval and generation are evaluated separately."
+    },
+    {
+      "id": "reranking",
+      "title": "Reranking",
+      "text": "First-pass retrieval uses a bi-encoder: the query and every document are embedded independently and compared by cosine similarity. This is fast and scalable but only approximate about relevance, because the two texts never actually see each other during encoding. Reranking adds a second stage that improves the ordering of the top candidates.\n\nA reranker is typically a cross-encoder: it takes the query and a candidate passage together as a single input and outputs a relevance score, so it can model fine-grained interactions between the two. Cross-encoders are far more accurate at judging relevance but far too slow to run over an entire corpus, so the standard pattern is to retrieve, say, the top fifty chunks cheaply with the bi-encoder and then rerank just those with the cross-encoder to pick the handful actually sent to the language model. Reranking is one of the most effective ways to raise the precision of the context, and it also helps reject passages that were retrieved but are not truly relevant."
+    },
+    {
+      "id": "transformers",
+      "title": "Transformer models",
+      "text": "The transformer is the neural network architecture behind modern language and embedding models. Its central mechanism is self-attention: when encoding a given token, the model computes attention weights over the other tokens in the input, letting it decide how much each other token should influence this one. This is how the architecture captures relationships between words regardless of how far apart they are in the text.\n\nText is first broken into tokens — subword units — before being fed to the model. The context window is the maximum number of tokens the model can attend to at once; anything beyond it must be truncated or handled with other techniques. A larger context window lets the model consider more text in a single pass but increases memory and compute roughly with the square of the length, because attention compares every token with every other token."
+    },
+    {
+      "id": "async_python",
+      "title": "Concurrency in Python",
+      "text": "CPython has a Global Interpreter Lock (GIL), a mutex that permits only one thread to execute Python bytecode at a time. The consequence is that using multiple threads does not speed up CPU-bound Python code, because the threads take turns rather than truly running in parallel. For CPU-bound parallelism the usual answer is multiprocessing, which runs separate interpreter processes each with its own GIL, or offloading the heavy work to native extensions that release the lock.\n\nFor I/O-bound work the picture is different. asyncio provides an event loop that runs a single thread but interleaves many tasks by suspending one whenever it awaits I/O and resuming another. This gives high concurrency for network and disk waits without threads, which is why web servers use it. It is the wrong tool for CPU-bound work, though: a long computation blocks the event loop and stalls every other task, so such work should be pushed to a process pool."
+    },
+    {
+      "id": "docker",
+      "title": "Docker and containers",
+      "text": "Docker packages an application together with all of its dependencies into a container image, a read-only template that runs the same way on any machine with a container runtime. This solves the classic works-on-my-machine problem, because the environment travels with the code rather than depending on whatever happens to be installed on the host. A container is a running instance of an image; you can start many containers from one image.\n\nDocker Compose describes a multi-container application in a single file, wiring services together on a shared network and attaching named volumes for data that must persist beyond a container's lifetime, since a container's own filesystem is ephemeral. This makes it easy to run, for example, an application server and its database together with one command, and to reproduce the same setup in development and continuous integration."
+    }
+  ],
+  "queries": [
+    { "type": "paraphrase", "question": "Which datastore keeps the whole database in one file and runs inside my application instead of as a separate server?", "expected_doc_ids": ["sqlite"] },
+    { "type": "paraphrase", "question": "Why do two differently worded sentences about the same topic end up numerically close together?", "expected_doc_ids": ["embeddings"] },
+    { "type": "paraphrase", "question": "What mechanism lets a model decide how much each other word should influence the one it is currently encoding?", "expected_doc_ids": ["transformers"] },
+    { "type": "paraphrase", "question": "Why doesn't adding more threads make a heavy number-crunching loop in Python run faster?", "expected_doc_ids": ["async_python"] },
+    { "type": "paraphrase", "question": "How can I make my service behave identically on a colleague's laptop and on the CI server?", "expected_doc_ids": ["docker"] },
+    { "type": "comparative-cross", "question": "Compare how SQLite and PostgreSQL handle many simultaneous writers.", "expected_doc_ids": ["sqlite", "postgres"] },
+    { "type": "comparative-cross", "question": "How is a query turned into ranked results, and what index would replace a brute-force scan once the corpus is huge?", "expected_doc_ids": ["embeddings", "vector_index"] },
+    { "type": "comparative-cross", "question": "How do chunk size and an embedding model's maximum input length constrain each other when preparing documents?", "expected_doc_ids": ["chunking", "embeddings"] },
+    { "type": "comparative-cross", "question": "After the first similarity search, what second step re-scores candidates to improve which passages are actually used?", "expected_doc_ids": ["reranking", "rag"] },
+    { "type": "multi-hop", "question": "Walk through how a user's question becomes a grounded, cited answer, from preparing documents to producing the final text.", "expected_doc_ids": ["chunking", "embeddings", "rag"] },
+    { "type": "multi-hop", "question": "My vector store has grown to tens of millions of chunks; what database and index changes should I consider to keep search fast and durable?", "expected_doc_ids": ["vector_index", "postgres"] },
+    { "type": "distractor", "question": "What exactly is overlap between adjacent segments and why is it worth the duplicated text?", "expected_doc_ids": ["chunking"] },
+    { "type": "distractor-cross", "question": "What is a cross-encoder and how does it differ from the bi-encoder used for the initial retrieval pass?", "expected_doc_ids": ["reranking", "embeddings"] },
+    { "type": "paraphrase", "question": "What puts a ceiling on how much text a model can take into account at one time?", "expected_doc_ids": ["transformers"] },
+    { "type": "negation", "question": "Which database would be a poor choice when a lot of clients need to write at the same time?", "expected_doc_ids": ["sqlite"] },
+    { "type": "constraint", "question": "For work that is mostly waiting on network calls, which Python concurrency approach fits, and when is it the wrong choice?", "expected_doc_ids": ["async_python"] },
+    { "type": "paraphrase", "question": "What is the relationship between an image and the thing that actually runs from it?", "expected_doc_ids": ["docker"] },
+    { "type": "paraphrase", "question": "How does forcing answers to come from retrieved passages cut down on made-up facts?", "expected_doc_ids": ["rag"] },
+    { "type": "negative", "question": "What's a good twelve-week training plan for a first-time marathon runner?", "expected_doc_ids": [] },
+    { "type": "negative", "question": "Explain the offside rule in football with an example.", "expected_doc_ids": [] },
+    { "type": "negative", "question": "What are the traditional ingredients in a classic tiramisu?", "expected_doc_ids": [] }
+  ]
+}

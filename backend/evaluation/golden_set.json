@@ -1,0 +1,66 @@
+{
+  "description": "Self-contained golden set for evaluating retrieval + generation. The evaluator ingests these documents into a fresh store, then runs each query and checks whether the expected source is retrieved and whether the answer stays grounded. Negatives (expected_doc_id = null) must be declined.",
+  "documents": [
+    {
+      "id": "photosynthesis",
+      "title": "Photosynthesis",
+      "text": "Photosynthesis is the process by which green plants use sunlight to convert carbon dioxide and water into glucose and oxygen. It takes place in the chloroplasts, where the pigment chlorophyll absorbs light energy. Photosynthesis releases oxygen as a by-product and is the foundation of most food chains on Earth."
+    },
+    {
+      "id": "mitochondria",
+      "title": "Mitochondria",
+      "text": "The mitochondrion is often called the powerhouse of the cell because it generates most of the cell's supply of ATP through cellular respiration. Respiration uses oxygen and glucose to release energy, producing carbon dioxide and water. Mitochondria have their own small circular DNA."
+    },
+    {
+      "id": "rag",
+      "title": "Retrieval Augmented Generation",
+      "text": "Retrieval Augmented Generation (RAG) is an AI pattern that combines a retriever over a document collection with a large language model. The retriever finds the most relevant chunks for a question, and the model answers using only that retrieved context. RAG reduces hallucination because answers are grounded in real sources that can be cited."
+    },
+    {
+      "id": "embeddings",
+      "title": "Embeddings and cosine similarity",
+      "text": "An embedding maps text to a fixed-length vector of numbers so that similar meanings land near each other. Cosine similarity measures the angle between two embedding vectors; a higher cosine score means more semantically similar text. Retrieval ranks chunks by cosine similarity to the query embedding and returns the top-k."
+    },
+    {
+      "id": "http_status",
+      "title": "HTTP status codes",
+      "text": "HTTP status codes signal the outcome of a request. 200 means OK and 201 means a resource was created. 404 means the requested resource was not found. 422 indicates a validation error in the request body. 500 means an unexpected server error occurred."
+    },
+    {
+      "id": "sqlite",
+      "title": "SQLite",
+      "text": "SQLite is a lightweight, serverless, file-based relational database. Unlike client-server databases such as PostgreSQL, SQLite stores the entire database in a single file on disk and runs inside the application process. It is a good fit for single-user or embedded applications."
+    },
+    {
+      "id": "docker",
+      "title": "Docker containers",
+      "text": "Docker packages an application together with its dependencies into a container image, so it runs the same way on any machine. A container is a running instance of an image. Docker solves the classic works-on-my-machine problem by making environments reproducible."
+    },
+    {
+      "id": "python_gil",
+      "title": "Python GIL",
+      "text": "The Global Interpreter Lock, or GIL, is a mutex in CPython that allows only one thread to execute Python bytecode at a time. This means multithreading does not speed up CPU-bound Python code. For CPU-bound parallelism, multiprocessing or native extensions are used instead."
+    }
+  ],
+  "queries": [
+    { "question": "How do plants convert sunlight into energy?", "expected_doc_id": "photosynthesis" },
+    { "question": "What gas do plants release during photosynthesis?", "expected_doc_id": "photosynthesis" },
+    { "question": "What produces most of the ATP in a cell?", "expected_doc_id": "mitochondria" },
+    { "question": "Which organelle is the powerhouse of the cell?", "expected_doc_id": "mitochondria" },
+    { "question": "What does RAG stand for?", "expected_doc_id": "rag" },
+    { "question": "How does retrieval augmented generation reduce hallucination?", "expected_doc_id": "rag" },
+    { "question": "How is similarity between two embeddings measured?", "expected_doc_id": "embeddings" },
+    { "question": "What is cosine similarity used for in retrieval?", "expected_doc_id": "embeddings" },
+    { "question": "Which HTTP status code means the resource was not found?", "expected_doc_id": "http_status" },
+    { "question": "What status code indicates a validation error?", "expected_doc_id": "http_status" },
+    { "question": "Is SQLite a client-server database?", "expected_doc_id": "sqlite" },
+    { "question": "Where does SQLite store its data?", "expected_doc_id": "sqlite" },
+    { "question": "What problem does Docker solve?", "expected_doc_id": "docker" },
+    { "question": "What is a container image?", "expected_doc_id": "docker" },
+    { "question": "What is the Python GIL?", "expected_doc_id": "python_gil" },
+    { "question": "Does the GIL let multithreading speed up CPU-bound code?", "expected_doc_id": "python_gil" },
+    { "question": "What is the capital of France?", "expected_doc_id": null },
+    { "question": "Give me a recipe for chocolate cake.", "expected_doc_id": null },
+    { "question": "Who won the football world cup in 2010?", "expected_doc_id": null }
+  ]
+}

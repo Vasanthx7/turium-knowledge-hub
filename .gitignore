@@ -1,0 +1,14 @@
+# Aggregated ignores (see backend/ and frontend/ for scoped rules)
+.venv/
+__pycache__/
+*.pyc
+node_modules/
+dist/
+.env
+*.db
+.DS_Store
+
+# editor swap files
+*.swp
+*.swo
+.*.swp
